@@ -156,55 +156,83 @@ function DoctorList() {
   };
 
   const printToken = (doctorName: string, patientName: string, tokenNumber: number) => {
-    const printWindow = window.open('', '', 'width=400,height=600');
+    const printWindow = window.open('', '', 'width=400,height=700');
     if (!printWindow) return;
 
     const printContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>OPD Token</title>
+          <title>OPD Token - Burhani Guards Pakistan DIV III</title>
           <style>
             body {
               font-family: Arial, sans-serif;
               padding: 20px;
               text-align: center;
             }
+            .logo {
+              width: 80px;
+              height: 80px;
+              margin: 0 auto 10px;
+            }
+            .org-name {
+              font-size: 16px;
+              font-weight: bold;
+              color: #2d5f3f;
+              margin-bottom: 5px;
+            }
             .token-container {
-              border: 2px solid #333;
+              border: 3px solid #2d5f3f;
               padding: 30px;
               margin: 20px;
               border-radius: 10px;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             }
             .token-number {
-              font-size: 48px;
+              font-size: 56px;
               font-weight: bold;
-              color: #2196F3;
+              color: #2d5f3f;
               margin: 20px 0;
+              text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
             }
             .label {
               font-size: 14px;
               color: #666;
-              margin-top: 10px;
+              margin-top: 15px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
             }
             .value {
               font-size: 18px;
               font-weight: bold;
               margin-bottom: 15px;
+              color: #333;
             }
             .header {
               font-size: 24px;
               font-weight: bold;
               margin-bottom: 20px;
+              color: #2d5f3f;
+            }
+            .footer {
+              margin-top: 20px;
+              font-size: 12px;
+              color: #888;
+              border-top: 1px solid #ddd;
+              padding-top: 10px;
             }
             @media print {
               .no-print {
                 display: none;
               }
+              body {
+                padding: 10px;
+              }
             }
           </style>
         </head>
         <body>
+          <div class="org-name">Burhani Guards Pakistan DIV III</div>
           <div class="token-container">
             <div class="header">OPD Token</div>
             <div class="token-number">#${tokenNumber}</div>
@@ -212,8 +240,11 @@ function DoctorList() {
             <div class="value">${doctorName}</div>
             <div class="label">Patient Name</div>
             <div class="value">${patientName}</div>
+            <div class="footer">
+              Date: ${new Date().toLocaleDateString()} | Time: ${new Date().toLocaleTimeString()}
+            </div>
           </div>
-          <button class="no-print" onclick="window.print()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">Print Token</button>
+          <button class="no-print" onclick="window.print()" style="margin-top: 20px; padding: 12px 24px; cursor: pointer; background: #2d5f3f; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold;">Print Token</button>
         </body>
       </html>
     `;

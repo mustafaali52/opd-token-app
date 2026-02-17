@@ -194,35 +194,60 @@ class DBService {
    */
   async getTokensByDoctor(doctorId: string | number, date?: Date): Promise<any[]> {
     try {
-      const constraints: QueryConstraint[] = [
+      // Query only by doctorId to avoid needing composite index
+      const q = query(
+        collection(db, this.COLLECTIONS.TOKENS),
         where("doctorId", "==", doctorId)
-      ];
+      );
 
+      const querySnapshot = await getDocs(q);
+      
+      let tokens = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          tokenNumber: data.tokenNumber || 0,
+          date: data.date,
+          doctorId: data.doctorId,
+          patientId: data.patientId,
+          doctorName: data.doctorName,
+          patientName: data.patientName,
+          patientData: data.patientData,
+          createdAt: data.createdAt
+        };
+      });
+      
+      // Filter by date in memory if date is provided
       if (date) {
         const startOfDay = new Date(date);
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date(date);
         endOfDay.setHours(23, 59, 59, 999);
 
-        constraints.push(
-          where("date", ">=", Timestamp.fromDate(startOfDay)),
-          where("date", "<=", Timestamp.fromDate(endOfDay))
-        );
+        tokens = tokens.filter(token => {
+          if (!token.date) return false;
+          
+          // Handle Firestore Timestamp
+          let tokenDate;
+          if (token.date.toDate && typeof token.date.toDate === 'function') {
+            tokenDate = token.date.toDate();
+          } else if (token.date instanceof Date) {
+            tokenDate = token.date;
+          } else {
+            return false;
+          }
+          
+          return tokenDate >= startOfDay && tokenDate <= endOfDay;
+        });
       }
-
-      const q = query(collection(db, this.COLLECTIONS.TOKENS), ...constraints);
-      const querySnapshot = await getDocs(q);
       
-      const tokens = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as any[];
-      
-      // Sort by token number descending in memory
-      return tokens.sort((a, b) => (b.tokenNumber || 0) - (a.tokenNumber || 0));
+      // Sort by token number descending
+      return tokens.sort((a, b) => b.tokenNumber - a.tokenNumber);
     } catch (error) {
       console.error("Error fetching tokens:", error);
-      throw error;
+      console.error("Error details:", error);
+      // Return empty array on error
+      return [];
     }
   }
 
@@ -231,10 +256,17 @@ class DBService {
    */
   async getLastTokenNumber(doctorId: string | number, date: Date = new Date()): Promise<number> {
     try {
+      console.log("Getting last token number for doctor:", doctorId, "date:", date);
       const tokens = await this.getTokensByDoctor(doctorId, date);
+      console.log("Retrieved tokens:", tokens);
+      
       if (tokens.length > 0) {
-        return tokens[0].tokenNumber;
+        const lastTokenNumber = tokens[0].tokenNumber;
+        console.log("Last token number:", lastTokenNumber);
+        return lastTokenNumber;
       }
+      
+      console.log("No tokens found, returning 0");
       return 0;
     } catch (error) {
       console.error("Error fetching last token number:", error);
