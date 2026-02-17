@@ -32,8 +32,7 @@ function DoctorList() {
 
   const genderOptions = [
     { label: "Male", value: "Male" },
-    { label: "Female", value: "Female" },
-    { label: "Other", value: "Other" }
+    { label: "Female", value: "Female" }
   ];
 
   useEffect(() => {
@@ -82,6 +81,8 @@ function DoctorList() {
 
     if (!patientData.itsNo.trim()) {
       errors.itsNo = "ITS Number is required";
+    } else if (!/^\d{8}$/.test(patientData.itsNo)) {
+      errors.itsNo = "ITS Number must be exactly 8 digits";
     }
 
     if (!patientData.name.trim()) {
@@ -350,6 +351,9 @@ function DoctorList() {
               className={patientErrors.itsNo ? "p-invalid" : ""}
               required
               autoFocus
+              keyfilter="pint"
+              maxLength={8}
+              placeholder="Enter 8-digit ITS number"
             />
             {patientErrors.itsNo && (
               <small style={{ color: "#e53935", fontSize: "12px" }}>
