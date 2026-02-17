@@ -146,7 +146,7 @@ function DoctorList() {
       });
 
       // Print token
-      printToken(selectedDoctor.name, patientData.name, currentToken);
+      printToken(selectedDoctor.name, patientData.name, currentToken, patientData.age, patientData.itsNo);
 
       // Close modal and reset
       handleCloseModal();
@@ -156,96 +156,255 @@ function DoctorList() {
     }
   };
 
-  const printToken = (doctorName: string, patientName: string, tokenNumber: number) => {
-    const printWindow = window.open('', '', 'width=400,height=700');
+  const printToken = (doctorName: string, patientName: string, tokenNumber: number, age: string, itsNo: string) => {
+    const printWindow = window.open('', '', 'width=800,height=900');
     if (!printWindow) return;
+
+    const currentDate = new Date();
+    const formattedDate = currentDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
 
     const printContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>OPD Token - Burhani Guards Pakistan DIV III</title>
+          <title>OPD Token</title>
           <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
             body {
               font-family: Arial, sans-serif;
               padding: 20px;
-              text-align: center;
+              background: white;
             }
-            .logo {
-              width: 80px;
-              height: 80px;
-              margin: 0 auto 10px;
-            }
-            .org-name {
-              font-size: 16px;
-              font-weight: bold;
-              color: #2d5f3f;
-              margin-bottom: 5px;
-            }
-            .token-container {
-              border: 3px solid #2d5f3f;
-              padding: 30px;
-              margin: 20px;
-              border-radius: 10px;
-              box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            }
-            .token-number {
-              font-size: 56px;
-              font-weight: bold;
-              color: #2d5f3f;
-              margin: 20px 0;
-              text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-            }
-            .label {
-              font-size: 14px;
-              color: #666;
-              margin-top: 15px;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-            }
-            .value {
-              font-size: 18px;
-              font-weight: bold;
-              margin-bottom: 15px;
-              color: #333;
+            .prescription {
+              width: 100%;
+              max-width: 700px;
+              margin: 0 auto;
+              border: 2px solid #000;
+              padding: 0;
+              background: white;
             }
             .header {
-              font-size: 24px;
-              font-weight: bold;
-              margin-bottom: 20px;
-              color: #2d5f3f;
+              text-align: center;
+              border-bottom: 2px solid #000;
+              padding: 10px;
+              background: #f5f5f5;
             }
-            .footer {
-              margin-top: 20px;
+            .header-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 3px;
+            }
+            .patient-info {
+              border-bottom: 2px solid #000;
+              display: grid;
+              grid-template-columns: auto 120px;
+            }
+            .info-left {
+              border-right: 2px solid #000;
+              padding: 10px;
+            }
+            .info-right {
+              padding: 10px;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+            }
+            .info-row {
+              display: flex;
+              padding: 5px 0;
+              align-items: center;
+            }
+            .info-label {
+              font-weight: bold;
+              min-width: 80px;
+              font-size: 14px;
+            }
+            .info-value {
+              flex: 1;
+              border-bottom: 1px solid #333;
+              padding: 2px 5px;
+              font-size: 14px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 10px;
+              margin-top: 5px;
+            }
+            .info-item {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+            }
+            .info-item-label {
+              font-weight: bold;
+              font-size: 13px;
+            }
+            .info-item-value {
+              flex: 1;
+              border-bottom: 1px solid #333;
+              height: 20px;
+            }
+            .token-label {
+              font-size: 14px;
+              font-weight: normal;
+              margin-bottom: 5px;
+            }
+            .token-number {
+              font-size: 72px;
+              font-weight: bold;
+              line-height: 1;
+            }
+            .doctor-row {
+              display: flex;
+              padding: 5px 0;
+            }
+            .doctor-label {
+              font-weight: bold;
+              min-width: 80px;
+              font-size: 14px;
+            }
+            .doctor-value {
+              flex: 1;
+              border-bottom: 1px solid #333;
+              padding: 2px 5px;
+              font-size: 14px;
+            }
+            .vitals-row {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+              padding: 5px 0;
+            }
+            .vital-item {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+            }
+            .vital-label {
+              font-weight: bold;
               font-size: 12px;
-              color: #888;
-              border-top: 1px solid #ddd;
-              padding-top: 10px;
+              white-space: nowrap;
+            }
+            .vital-value {
+              flex: 1;
+              border-bottom: 1px solid #333;
+              height: 20px;
+            }
+            .rx-section {
+              padding: 15px;
+              min-height: 400px;
+              position: relative;
+            }
+            .rx-symbol {
+              font-size: 36px;
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+            .signature-section {
+              border-top: 2px solid #000;
+              padding: 15px;
+              text-align: right;
+            }
+            .signature-line {
+              border-bottom: 1px solid #000;
+              width: 200px;
+              margin-left: auto;
+              margin-bottom: 5px;
+              height: 25px;
+            }
+            .signature-label {
+              font-weight: bold;
+              font-size: 14px;
             }
             @media print {
+              body {
+                padding: 0;
+              }
               .no-print {
                 display: none;
               }
-              body {
-                padding: 10px;
+              @page {
+                margin: 0.5cm;
               }
             }
           </style>
         </head>
         <body>
-          <div class="org-name">Burhani Guards Pakistan DIV III</div>
-          <div class="token-container">
-            <div class="header">OPD Token</div>
-            <div class="token-number">#${tokenNumber}</div>
-            <div class="label">Doctor Name</div>
-            <div class="value">${doctorName}</div>
-            <div class="label">Patient Name</div>
-            <div class="value">${patientName}</div>
-            <div class="footer">
-              Date: ${new Date().toLocaleDateString()} | Time: ${new Date().toLocaleTimeString()}
+          <div class="prescription">
+            <div class="header">
+              <div class="header-title">MAHAL-US-SHIFA - 1447H</div>
+            </div>
+            
+            <div class="patient-info">
+              <div class="info-left">
+                <div class="info-row">
+                  <span class="info-label">Name:</span>
+                  <span class="info-value">${patientName}</span>
+                </div>
+                
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="info-item-label">Date:</span>
+                    <span class="info-item-value">${formattedDate}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-item-label">Age</span>
+                    <span class="info-item-value">${age}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-item-label">ITS#</span>
+                    <span class="info-item-value">${itsNo}</span>
+                  </div>
+                </div>
+                
+                <div class="doctor-row">
+                  <span class="doctor-label">Doctor:</span>
+                  <span class="doctor-value">${doctorName}</span>
+                </div>
+                
+                <div class="vitals-row">
+                  <div class="vital-item">
+                    <span class="vital-label">BP/Pulse</span>
+                    <span class="vital-value"></span>
+                  </div>
+                  <div class="vital-item">
+                    <span class="vital-label">Weight</span>
+                    <span class="vital-value"></span>
+                  </div>
+                  <div class="vital-item">
+                    <span class="vital-label">Height</span>
+                    <span class="vital-value"></span>
+                  </div>
+                  <div class="vital-item">
+                    <span class="vital-label">Sugar:</span>
+                    <span class="vital-value"></span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="info-right">
+                <div class="token-label">Token No</div>
+                <div class="token-number">${tokenNumber}</div>
+              </div>
+            </div>
+            
+            <div class="rx-section">
+              <div class="rx-symbol">℞</div>
+            </div>
+            
+            <div class="signature-section">
+              <div class="signature-line"></div>
+              <div class="signature-label">Signature</div>
             </div>
           </div>
-          <button class="no-print" onclick="window.print()" style="margin-top: 20px; padding: 12px 24px; cursor: pointer; background: #2d5f3f; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold;">Print Token</button>
+          
+          <button class="no-print" onclick="window.print()" style="margin-top: 20px; padding: 12px 24px; cursor: pointer; background: #2d5f3f; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: block; margin-left: auto; margin-right: auto;">Print Token</button>
         </body>
       </html>
     `;
