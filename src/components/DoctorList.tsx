@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Doctor } from "../models/Doctor";
-import type { Patient } from "../models/Patient";
-import { fetchDoctor } from "../services/doctorService";
+import { fetchDoctor, addDoctor } from "../services/doctorService";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
@@ -10,6 +9,8 @@ import { InputIcon } from "primereact/inputicon";
 import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
+import { AddDoctorModal } from "./AddDoctorModal";
+import { PatientList } from "./PatientList";
 
 function DoctorList() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -17,8 +18,9 @@ function DoctorList() {
   const [error, setError] = useState<string | null>(null);
   const [globalFilter, setGlobalFilter] = useState<string>("");
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [showAddDoctorModal, setShowAddDoctorModal] = useState<boolean>(false);
+  const [showPatientList, setShowPatientList] = useState<boolean>(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
-  const [doctorTokens, setDoctorTokens] = useState<Record<number, number>>({});
   const [patientData, setPatientData] = useState({
     itsNo: "",
     name: "",
@@ -26,6 +28,7 @@ function DoctorList() {
     gender: "",
     mohallah: ""
   });
+  const [patientErrors, setPatientErrors] = useState<Record<string, string>>({});
 
   const genderOptions = [
     { label: "Male", value: "Male" },
@@ -34,15 +37,31 @@ function DoctorList() {
   ];
 
   useEffect(() => {
+    loadDoctors();
+  }, []);
+
+  const loadDoctors = () => {
+    setLoading(true);
     fetchDoctor()
       .then(setDoctors)
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
   const handleAddPatient = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
     setShowModal(true);
+  };
+
+  const handleSaveDoctor = async (doctorData: Omit<Doctor, "id">) => {
+    try {
+      await addDoctor(doctorData);
+      // Reload doctors list
+      await loadDoctors();
+    } catch (error) {
+      console.error("Error saving doctor:", error);
+      throw error;
+    }
   };
 
   const handleCloseModal = () => {
@@ -55,23 +74,85 @@ function DoctorList() {
       gender: "",
       mohallah: ""
     });
+    setPatientErrors({});
   };
 
-  const handleSaveAndPrint = () => {
+  const validatePatientForm = () => {
+    const errors: Record<string, string> = {};
+
+    if (!patientData.itsNo.trim()) {
+      errors.itsNo = "ITS Number is required";
+    }
+
+    if (!patientData.name.trim()) {
+      errors.name = "Name is required";
+    }
+
+    if (!patientData.age.trim()) {
+      errors.age = "Age is required";
+    } else if (parseInt(patientData.age) <= 0) {
+      errors.age = "Age must be a positive number";
+    }
+
+    if (!patientData.gender) {
+      errors.gender = "Gender is required";
+    }
+
+    setPatientErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveAndPrint = async () => {
     if (!selectedDoctor) return;
 
-    // Generate token number for this doctor
-    const currentToken = (doctorTokens[selectedDoctor.id] || 0) + 1;
-    setDoctorTokens(prev => ({
-      ...prev,
-      [selectedDoctor.id]: currentToken
-    }));
+    // Validate form
+    if (!validatePatientForm()) {
+      return;
+    }
 
-    // Print token
-    printToken(selectedDoctor.name, patientData.name, currentToken);
+    try {
+      const { dbService } = await import("../services/dbService");
+      
+      // Get last token number for today for this doctor
+      const today = new Date();
+      const lastToken = await dbService.getLastTokenNumber(selectedDoctor.id, today);
+      const currentToken = lastToken + 1;
 
-    // Close modal and reset
-    handleCloseModal();
+      // Save patient to database
+      const patient = {
+        itsNo: patientData.itsNo,
+        name: patientData.name,
+        age: parseInt(patientData.age),
+        gender: patientData.gender,
+        mohallah: patientData.mohallah,
+        tokenNumber: currentToken,
+        doctorId: selectedDoctor.id,
+        doctorName: selectedDoctor.name,
+        date: new Date().toISOString()
+      };
+
+      const patientId = await dbService.addPatient(patient);
+
+      // Save token to database
+      await dbService.addToken({
+        doctorId: selectedDoctor.id,
+        patientId: patientId,
+        tokenNumber: currentToken,
+        doctorName: selectedDoctor.name,
+        patientName: patientData.name,
+        patientData: patient,
+        date: new Date()
+      });
+
+      // Print token
+      printToken(selectedDoctor.name, patientData.name, currentToken);
+
+      // Close modal and reset
+      handleCloseModal();
+    } catch (error) {
+      console.error("Error saving patient and token:", error);
+      alert("Failed to save patient data. Please try again.");
+    }
   };
 
   const printToken = (doctorName: string, patientName: string, tokenNumber: number) => {
@@ -168,15 +249,29 @@ function DoctorList() {
   const header = (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <h2 style={{ margin: 0 }}>Doctors</h2>
-      <IconField iconPosition="left">
-        <InputIcon className="pi pi-search" />
-        <InputText
-          type="search"
-          placeholder="Search doctors..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+        <Button
+          label="View Patients"
+          icon="pi pi-users"
+          onClick={() => setShowPatientList(true)}
+          className="p-button-info"
         />
-      </IconField>
+        <Button
+          label="Add Doctor"
+          icon="pi pi-user-plus"
+          onClick={() => setShowAddDoctorModal(true)}
+          className="p-button-success"
+        />
+        <IconField iconPosition="left">
+          <InputIcon className="pi pi-search" />
+          <InputText
+            type="search"
+            placeholder="Search doctors..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+          />
+        </IconField>
+      </div>
     </div>
   );
 
@@ -213,38 +308,71 @@ function DoctorList() {
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div>
-            <label htmlFor="itsNo" style={{ display: "block", marginBottom: "0.5rem" }}>ITS Number</label>
+            <label htmlFor="itsNo" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+              ITS Number <span style={{ color: "#e53935" }}>*</span>
+            </label>
             <InputText
               id="itsNo"
               value={patientData.itsNo}
               onChange={(e) => handleInputChange("itsNo", e.target.value)}
               style={{ width: "100%" }}
+              className={patientErrors.itsNo ? "p-invalid" : ""}
+              required
+              autoFocus
             />
+            {patientErrors.itsNo && (
+              <small style={{ color: "#e53935", fontSize: "12px" }}>
+                <i className="pi pi-times-circle" style={{ marginRight: "0.25rem" }}></i>
+                {patientErrors.itsNo}
+              </small>
+            )}
           </div>
 
           <div>
-            <label htmlFor="name" style={{ display: "block", marginBottom: "0.5rem" }}>Name</label>
+            <label htmlFor="name" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+              Name <span style={{ color: "#e53935" }}>*</span>
+            </label>
             <InputText
               id="name"
               value={patientData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
               style={{ width: "100%" }}
+              className={patientErrors.name ? "p-invalid" : ""}
+              required
             />
+            {patientErrors.name && (
+              <small style={{ color: "#e53935", fontSize: "12px" }}>
+                <i className="pi pi-times-circle" style={{ marginRight: "0.25rem" }}></i>
+                {patientErrors.name}
+              </small>
+            )}
           </div>
 
           <div>
-            <label htmlFor="age" style={{ display: "block", marginBottom: "0.5rem" }}>Age</label>
+            <label htmlFor="age" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+              Age <span style={{ color: "#e53935" }}>*</span>
+            </label>
             <InputText
               id="age"
               value={patientData.age}
               onChange={(e) => handleInputChange("age", e.target.value)}
               keyfilter="pint"
               style={{ width: "100%" }}
+              className={patientErrors.age ? "p-invalid" : ""}
+              required
             />
+            {patientErrors.age && (
+              <small style={{ color: "#e53935", fontSize: "12px" }}>
+                <i className="pi pi-times-circle" style={{ marginRight: "0.25rem" }}></i>
+                {patientErrors.age}
+              </small>
+            )}
           </div>
 
           <div>
-            <label htmlFor="gender" style={{ display: "block", marginBottom: "0.5rem" }}>Gender</label>
+            <label htmlFor="gender" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+              Gender <span style={{ color: "#e53935" }}>*</span>
+            </label>
             <Dropdown
               id="gender"
               value={patientData.gender}
@@ -252,20 +380,42 @@ function DoctorList() {
               onChange={(e) => handleInputChange("gender", e.value)}
               placeholder="Select Gender"
               style={{ width: "100%" }}
+              className={patientErrors.gender ? "p-invalid" : ""}
+              required
             />
+            {patientErrors.gender && (
+              <small style={{ color: "#e53935", fontSize: "12px" }}>
+                <i className="pi pi-times-circle" style={{ marginRight: "0.25rem" }}></i>
+                {patientErrors.gender}
+              </small>
+            )}
           </div>
 
           <div>
-            <label htmlFor="mohallah" style={{ display: "block", marginBottom: "0.5rem" }}>Mohallah</label>
+            <label htmlFor="mohallah" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+              Mohallah
+            </label>
             <InputText
               id="mohallah"
               value={patientData.mohallah}
               onChange={(e) => handleInputChange("mohallah", e.target.value)}
               style={{ width: "100%" }}
+              placeholder="Optional"
             />
           </div>
         </div>
       </Dialog>
+
+      <AddDoctorModal
+        visible={showAddDoctorModal}
+        onHide={() => setShowAddDoctorModal(false)}
+        onSave={handleSaveDoctor}
+      />
+
+      <PatientList
+        visible={showPatientList}
+        onHide={() => setShowPatientList(false)}
+      />
     </div>
   );
 }

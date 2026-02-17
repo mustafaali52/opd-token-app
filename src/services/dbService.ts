@@ -10,7 +10,6 @@ import {
   where,
   orderBy,
   Timestamp,
-  DocumentData,
   QueryConstraint
 } from "firebase/firestore";
 import { db } from "../config/firebase";
@@ -51,7 +50,7 @@ class DBService {
     try {
       const querySnapshot = await getDocs(collection(db, this.COLLECTIONS.DOCTORS));
       return querySnapshot.docs.map(doc => ({
-        id: parseInt(doc.id) || 0,
+        id: doc.id,
         ...doc.data()
       } as Doctor));
     } catch (error) {
@@ -70,7 +69,7 @@ class DBService {
       
       if (docSnap.exists()) {
         return {
-          id: parseInt(docSnap.id) || 0,
+          id: docSnap.id,
           ...docSnap.data()
         } as Doctor;
       }
@@ -130,9 +129,11 @@ class DBService {
    */
   async getPatients(): Promise<Patient[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, this.COLLECTIONS.PATIENTS));
+      const querySnapshot = await getDocs(
+        query(collection(db, this.COLLECTIONS.PATIENTS), orderBy("createdAt", "desc"))
+      );
       return querySnapshot.docs.map(doc => ({
-        id: parseInt(doc.id) || 0,
+        id: doc.id,
         ...doc.data()
       } as Patient));
     } catch (error) {
@@ -144,22 +145,19 @@ class DBService {
   /**
    * Search patients by ITS number
    */
-  async getPatientByItsNo(itsNo: string): Promise<Patient | null> {
+  async getPatientByItsNo(itsNo: string): Promise<Patient[]> {
     try {
       const q = query(
         collection(db, this.COLLECTIONS.PATIENTS),
-        where("itsNo", "==", itsNo)
+        where("itsNo", "==", itsNo),
+        orderBy("createdAt", "desc")
       );
       const querySnapshot = await getDocs(q);
       
-      if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs[0];
-        return {
-          id: parseInt(doc.id) || 0,
-          ...doc.data()
-        } as Patient;
-      }
-      return null;
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Patient));
     } catch (error) {
       console.error("Error fetching patient by ITS number:", error);
       throw error;
@@ -170,11 +168,12 @@ class DBService {
    * Add a new token record
    */
   async addToken(tokenData: {
-    doctorId: number;
-    patientId: number;
+    doctorId: string | number;
+    patientId: string;
     tokenNumber: number;
     doctorName: string;
     patientName: string;
+    patientData: any;
     date: Date;
   }): Promise<string> {
     try {
@@ -193,11 +192,10 @@ class DBService {
   /**
    * Get all tokens for a specific doctor
    */
-  async getTokensByDoctor(doctorId: number, date?: Date): Promise<any[]> {
+  async getTokensByDoctor(doctorId: string | number, date?: Date): Promise<any[]> {
     try {
       const constraints: QueryConstraint[] = [
-        where("doctorId", "==", doctorId),
-        orderBy("tokenNumber", "desc")
+        where("doctorId", "==", doctorId)
       ];
 
       if (date) {
@@ -215,10 +213,13 @@ class DBService {
       const q = query(collection(db, this.COLLECTIONS.TOKENS), ...constraints);
       const querySnapshot = await getDocs(q);
       
-      return querySnapshot.docs.map(doc => ({
+      const tokens = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as any[];
+      
+      // Sort by token number descending in memory
+      return tokens.sort((a, b) => (b.tokenNumber || 0) - (a.tokenNumber || 0));
     } catch (error) {
       console.error("Error fetching tokens:", error);
       throw error;
@@ -228,7 +229,7 @@ class DBService {
   /**
    * Get the last token number for a specific doctor on a specific date
    */
-  async getLastTokenNumber(doctorId: number, date: Date = new Date()): Promise<number> {
+  async getLastTokenNumber(doctorId: string | number, date: Date = new Date()): Promise<number> {
     try {
       const tokens = await this.getTokensByDoctor(doctorId, date);
       if (tokens.length > 0) {

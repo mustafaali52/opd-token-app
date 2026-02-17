@@ -1,8 +1,12 @@
 export interface Patient {
-  id: number;
+  id?: string;
   itsNo: string;
   name: string;
-  age: number;
+  age: number | string;
   gender: string;
   mohallah: string;
+  tokenNumber?: number;
+  doctorId?: string | number;
+  doctorName?: string;
+  date?: Date | string;
 }

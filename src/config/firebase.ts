@@ -4,13 +4,15 @@ import { getFirestore } from "firebase/firestore";
 // TODO: Replace with your Firebase project configuration
 // Get these values from Firebase Console > Project Settings > General
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCeQc5w-cwVGR7dWmlhY2kREyG7qtu_nXI",
+  authDomain: "opd-token-generate-db.firebaseapp.com",
+  projectId: "opd-token-generate-db",
+  storageBucket: "opd-token-generate-db.firebasestorage.app",
+  messagingSenderId: "1001278712124",
+  appId: "1:1001278712124:web:3cfd41d7dbe571d65f5639",
+  measurementId: "G-P3XYNCBGDT"
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
