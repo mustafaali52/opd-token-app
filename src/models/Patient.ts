@@ -3,8 +3,6 @@ export interface Patient {
   itsNo: string;
   name: string;
   age: number | string;
-  gender: string;
-  mohallah: string;
   tokenNumber?: number;
   doctorId?: string | number;
   doctorName?: string;

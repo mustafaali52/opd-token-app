@@ -8,7 +8,6 @@ import { IconField } from "primereact/iconfield";
 import { InputIcon } from "primereact/inputicon";
 import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
-import { Dropdown } from "primereact/dropdown";
 import { AddDoctorModal } from "./AddDoctorModal";
 import { PatientList } from "./PatientList";
 
@@ -24,16 +23,9 @@ function DoctorList() {
   const [patientData, setPatientData] = useState({
     itsNo: "",
     name: "",
-    age: "",
-    gender: "",
-    mohallah: ""
+    age: ""
   });
   const [patientErrors, setPatientErrors] = useState<Record<string, string>>({});
-
-  const genderOptions = [
-    { label: "Male", value: "Male" },
-    { label: "Female", value: "Female" }
-  ];
 
   useEffect(() => {
     loadDoctors();
@@ -69,9 +61,7 @@ function DoctorList() {
     setPatientData({
       itsNo: "",
       name: "",
-      age: "",
-      gender: "",
-      mohallah: ""
+      age: ""
     });
     setPatientErrors({});
   };
@@ -93,10 +83,6 @@ function DoctorList() {
       errors.age = "Age is required";
     } else if (parseInt(patientData.age) <= 0) {
       errors.age = "Age must be a positive number";
-    }
-
-    if (!patientData.gender) {
-      errors.gender = "Gender is required";
     }
 
     setPatientErrors(errors);
@@ -124,8 +110,6 @@ function DoctorList() {
         itsNo: patientData.itsNo,
         name: patientData.name,
         age: parseInt(patientData.age),
-        gender: patientData.gender,
-        mohallah: patientData.mohallah,
         tokenNumber: currentToken,
         doctorId: selectedDoctor.id,
         doctorName: selectedDoctor.name,
@@ -561,41 +545,6 @@ function DoctorList() {
                 {patientErrors.age}
               </small>
             )}
-          </div>
-
-          <div>
-            <label htmlFor="gender" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
-              Gender <span style={{ color: "#e53935" }}>*</span>
-            </label>
-            <Dropdown
-              id="gender"
-              value={patientData.gender}
-              options={genderOptions}
-              onChange={(e) => handleInputChange("gender", e.value)}
-              placeholder="Select Gender"
-              style={{ width: "100%" }}
-              className={patientErrors.gender ? "p-invalid" : ""}
-              required
-            />
-            {patientErrors.gender && (
-              <small style={{ color: "#e53935", fontSize: "12px" }}>
-                <i className="pi pi-times-circle" style={{ marginRight: "0.25rem" }}></i>
-                {patientErrors.gender}
-              </small>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="mohallah" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
-              Mohallah
-            </label>
-            <InputText
-              id="mohallah"
-              value={patientData.mohallah}
-              onChange={(e) => handleInputChange("mohallah", e.target.value)}
-              style={{ width: "100%" }}
-              placeholder="Optional"
-            />
           </div>
         </div>
       </Dialog>

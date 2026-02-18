@@ -433,12 +433,10 @@ export function PatientList({ visible, onHide }: PatientListProps) {
       >
         <Column field="tokenNumber" header="Token #" body={tokenBodyTemplate} sortable style={{ width: "10%" }} />
         <Column field="itsNo" header="ITS#" sortable style={{ width: "12%" }} />
-        <Column field="name" header="Name" sortable style={{ width: "18%" }} />
-        <Column field="age" header="Age" sortable style={{ width: "8%" }} />
-        <Column field="gender" header="Gender" sortable style={{ width: "10%" }} />
-        <Column field="mohallah" header="Mohallah" sortable style={{ width: "15%" }} />
-        <Column field="doctorName" header="Doctor" sortable style={{ width: "15%" }} />
-        <Column field="date" header="Date/Time" body={dateBodyTemplate} sortable style={{ width: "12%" }} />
+        <Column field="name" header="Name" sortable style={{ width: "20%" }} />
+        <Column field="age" header="Age" sortable style={{ width: "10%" }} />
+        <Column field="doctorName" header="Doctor" sortable style={{ width: "20%" }} />
+        <Column field="date" header="Date/Time" body={dateBodyTemplate} sortable style={{ width: "18%" }} />
         <Column header="Actions" body={actionBodyTemplate} style={{ width: "10%" }} />
       </DataTable>
     </Dialog>
