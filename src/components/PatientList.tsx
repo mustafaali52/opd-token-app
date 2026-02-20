@@ -7,6 +7,7 @@ import { InputIcon } from "primereact/inputicon";
 import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { Calendar } from "primereact/calendar";
+import * as XLSX from "xlsx";
 import type { Patient } from "../models/Patient";
 import { dbService } from "../services/dbService";
 
@@ -322,8 +323,6 @@ export function PatientList({ visible, onHide }: PatientListProps) {
               <div class="signature-label">Signature</div>
             </div>
           </div>
-          
-          <button class="no-print" onclick="window.print()" style="margin-top: 20px; padding: 12px 24px; cursor: pointer; background: #2d5f3f; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: block; margin-left: auto; margin-right: auto;">Print Token</button>
         </body>
       </html>
     `;
@@ -364,19 +363,68 @@ export function PatientList({ visible, onHide }: PatientListProps) {
     setSelectedDate(null);
   };
 
+  const exportToExcel = () => {
+    // Prepare data for export
+    const exportData = filteredPatients.map((patient) => ({
+      "Token #": patient.tokenNumber || "-",
+      "ITS#": patient.itsNo,
+      "Name": patient.name,
+      "Age": patient.age,
+      "Doctor": patient.doctorName || "-",
+      "Date": patient.date ? new Date(patient.date).toLocaleDateString() : "-",
+      "Time": patient.date ? new Date(patient.date).toLocaleTimeString() : "-"
+    }));
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 10 }, // Token #
+      { wch: 12 }, // ITS#
+      { wch: 25 }, // Name
+      { wch: 8 },  // Age
+      { wch: 25 }, // Doctor
+      { wch: 12 }, // Date
+      { wch: 12 }  // Time
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Patients");
+
+    // Generate filename with current date
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    const filename = `Patients_${dateStr}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, filename);
+  };
+
   const header = (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h2 style={{ margin: 0 }}>Patient List</h2>
-        {(searchITS || selectedDate) && (
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <Button
-            label="Clear Filters"
-            icon="pi pi-filter-slash"
-            onClick={handleClearFilters}
-            className="p-button-text p-button-secondary"
+            label="Export to Excel"
+            icon="pi pi-file-excel"
+            onClick={exportToExcel}
+            className="p-button-success"
             size="small"
+            disabled={filteredPatients.length === 0}
           />
-        )}
+          {(searchITS || selectedDate) && (
+            <Button
+              label="Clear Filters"
+              icon="pi pi-filter-slash"
+              onClick={handleClearFilters}
+              className="p-button-text p-button-secondary"
+              size="small"
+            />
+          )}
+        </div>
       </div>
       <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ flex: "1", minWidth: "250px" }}>

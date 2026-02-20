@@ -10,6 +10,7 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { AddDoctorModal } from "./AddDoctorModal";
 import { PatientList } from "./PatientList";
+import { dbService } from "../services/dbService";
 
 function DoctorList() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -20,6 +21,7 @@ function DoctorList() {
   const [showAddDoctorModal, setShowAddDoctorModal] = useState<boolean>(false);
   const [showPatientList, setShowPatientList] = useState<boolean>(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [nextTokenNumbers, setNextTokenNumbers] = useState<Record<string, number>>({});
   const [patientData, setPatientData] = useState({
     itsNo: "",
     name: "",
@@ -31,12 +33,38 @@ function DoctorList() {
     loadDoctors();
   }, []);
 
-  const loadDoctors = () => {
+  const loadDoctors = async () => {
     setLoading(true);
-    fetchDoctor()
-      .then(setDoctors)
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+    try {
+      const doctorsList = await fetchDoctor();
+      setDoctors(doctorsList);
+      
+      // Load next token numbers for all doctors
+      await loadNextTokenNumbers(doctorsList);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadNextTokenNumbers = async (doctorsList: Doctor[]) => {
+    const today = new Date();
+    const tokenMap: Record<string, number> = {};
+    
+    for (const doctor of doctorsList) {
+      if (doctor.id) {
+        try {
+          const lastToken = await dbService.getLastTokenNumber(doctor.id, today);
+          tokenMap[doctor.id] = lastToken + 1;
+        } catch (error) {
+          console.error(`Error fetching token for doctor ${doctor.id}:`, error);
+          tokenMap[doctor.id] = 1;
+        }
+      }
+    }
+    
+    setNextTokenNumbers(tokenMap);
   };
 
   const handleAddPatient = (doctor: Doctor) => {
@@ -131,6 +159,14 @@ function DoctorList() {
 
       // Print token
       printToken(selectedDoctor.name, patientData.name, currentToken, patientData.age, patientData.itsNo);
+
+      // Update next token number for this doctor
+      if (selectedDoctor.id) {
+        setNextTokenNumbers(prev => ({
+          ...prev,
+          [selectedDoctor.id!]: currentToken + 1
+        }));
+      }
 
       // Close modal and reset
       handleCloseModal();
@@ -387,8 +423,6 @@ function DoctorList() {
               <div class="signature-label">Signature</div>
             </div>
           </div>
-          
-          <button class="no-print" onclick="window.print()" style="margin-top: 20px; padding: 12px 24px; cursor: pointer; background: #2d5f3f; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: block; margin-left: auto; margin-right: auto;">Print Token</button>
         </body>
       </html>
     `;
@@ -405,6 +439,12 @@ function DoctorList() {
 
   const handleInputChange = (field: string, value: string) => {
     setPatientData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const nextTokenBodyTemplate = (doctor: Doctor) => {
+    if (!doctor.id) return "-";
+    const nextToken = nextTokenNumbers[doctor.id];
+    return nextToken ? `#${nextToken}` : "-";
   };
 
   const actionBodyTemplate = (doctor: Doctor) => {
@@ -463,9 +503,10 @@ function DoctorList() {
         emptyMessage="No doctors found."
         tableStyle={{ minWidth: "50rem" }}
       >
-        <Column field="name" header="Name" sortable style={{ width: "25%" }} />
-        <Column field="specialization" header="Specialization" sortable style={{ width: "25%" }} />
-        <Column field="phone" header="Phone" sortable style={{ width: "25%" }} />
+        <Column field="name" header="Name" sortable style={{ width: "22%" }} />
+        <Column field="specialization" header="Specialization" sortable style={{ width: "22%" }} />
+        <Column field="phone" header="Phone" sortable style={{ width: "18%" }} />
+        <Column header="Next Token" body={nextTokenBodyTemplate} sortable style={{ width: "13%" }} />
         <Column header="Actions" body={actionBodyTemplate} style={{ width: "25%" }} />
       </DataTable>
 
